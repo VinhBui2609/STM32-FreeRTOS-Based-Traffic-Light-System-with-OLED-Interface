@@ -36,22 +36,22 @@ The system uses multiple RTOS tasks to manage LEDs, button input, and OLED displ
 
 ## V-Tasks
 
-### 1.TrafficLightTask
-Controls LED state transitions.
-- RED
-- RED_YELLOW
-- GREEN
-- YELLOW
+  ### 1.TrafficLightTask
+  Controls LED state transitions.
+  - RED
+  - RED_YELLOW
+  - GREEN
+  - YELLOW
 
-### 2.ButtonTask
-Reads pedestrian button input.
+  ### 2.ButtonTask
+  Reads pedestrian button input.
 
-### 3.DisplayTask
-Updates OLED display with current traffic state.
+  ### 3.DisplayTask
+  Updates OLED display with current traffic state.
 
 
 
-## Build & Flash
+## VI-Build & Flash
 1. Open project in STM32CubeIDE
 2. Build the project
 3. Flash to STM32 board
