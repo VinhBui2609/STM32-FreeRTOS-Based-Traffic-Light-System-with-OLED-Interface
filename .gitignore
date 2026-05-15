@@ -1,0 +1,9 @@
+# Configuration folders
+.settings/
+Debug/
+Drivers/
+
+# Configuration files
+*.launch
+*.debug
+*.ld
