@@ -1,19 +1,17 @@
 # STM32 FreeRTOS Traffic Light Controller
 
 This project implements a traffic light controller using FreeRTOS on STM32.
-The system uses multiple RTOS tasks to manage LEDs, button input, and OLED display updates.
+The system uses multiple RTOS tasks to manage LEDs, button input and many features
 
 ## I-Features:
 - Traffic light state machine
 - Pedestrian button handling
-- SSD1306 OLED status display
 - FreeRTOS task scheduling
 - Inter-task communication
 
 
 ## II-Hardware
 - STM32F411RE
-- SSD1306 OLED Display (I2C)
 - LEDs
 - Push Button
 - Breadboard + Jumper Wires
