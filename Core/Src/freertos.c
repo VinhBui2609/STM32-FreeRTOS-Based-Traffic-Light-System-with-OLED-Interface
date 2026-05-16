@@ -25,6 +25,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include "traffic_system.h"
+#include "logger.h"
 
 /* USER CODE END Includes */
 
@@ -47,51 +50,71 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-/* Definitions for TrafficTask */
-osThreadId_t TrafficTaskHandle;
-const osThreadAttr_t TrafficTask_attributes = {
-  .name = "TrafficTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
-};
-/* Definitions for DisplayTask */
-osThreadId_t DisplayTaskHandle;
-const osThreadAttr_t DisplayTask_attributes = {
-  .name = "DisplayTask",
+/* Definitions for NorthTask */
+osThreadId_t NorthTaskHandle;
+const osThreadAttr_t NorthTask_attributes = {
+  .name = "NorthTask",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for ButtonTask */
-osThreadId_t ButtonTaskHandle;
-const osThreadAttr_t ButtonTask_attributes = {
-  .name = "ButtonTask",
+/* Definitions for EastTask */
+osThreadId_t EastTaskHandle;
+const osThreadAttr_t EastTask_attributes = {
+  .name = "EastTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for PedestrianTask */
+osThreadId_t PedestrianTaskHandle;
+const osThreadAttr_t PedestrianTask_attributes = {
+  .name = "PedestrianTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
+/* Definitions for LoggerTask */
+osThreadId_t LoggerTaskHandle;
+const osThreadAttr_t LoggerTask_attributes = {
+  .name = "LoggerTask",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for QueueMsg */
-osMessageQueueId_t QueueMsgHandle;
-const osMessageQueueAttr_t QueueMsg_attributes = {
-  .name = "QueueMsg"
+/* Definitions for xNorthQueue */
+osMessageQueueId_t xNorthQueueHandle;
+const osMessageQueueAttr_t xNorthQueue_attributes = {
+  .name = "xNorthQueue"
 };
-/* Definitions for myMutex */
-osMutexId_t myMutexHandle;
-const osMutexAttr_t myMutex_attributes = {
-  .name = "myMutex"
+/* Definitions for xEastQueue */
+osMessageQueueId_t xEastQueueHandle;
+const osMessageQueueAttr_t xEastQueue_attributes = {
+  .name = "xEastQueue"
 };
-/* Definitions for myBinarySem */
-osSemaphoreId_t myBinarySemHandle;
-const osSemaphoreAttr_t myBinarySem_attributes = {
-  .name = "myBinarySem"
+/* Definitions for xPedReqQueue */
+osMessageQueueId_t xPedReqQueueHandle;
+const osMessageQueueAttr_t xPedReqQueue_attributes = {
+  .name = "xPedReqQueue"
+};
+/* Definitions for uartMutex */
+osMutexId_t uartMutexHandle;
+const osMutexAttr_t uartMutex_attributes = {
+  .name = "uartMutex"
+};
+/* Definitions for ButtonSem */
+osSemaphoreId_t ButtonSemHandle;
+const osSemaphoreAttr_t ButtonSem_attributes = {
+  .name = "ButtonSem"
 };
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
+TrafficLight NS, WE;	// NS: North-South
+						// WE: West-East
 
 /* USER CODE END FunctionPrototypes */
 
-void StartTrafficTask(void *argument);
-void StartDisplayTask(void *argument);
-void StartButtonTask(void *argument);
+void StartNorthTask(void *argument);
+void StartEastTask(void *argument);
+void StartPedestrianTask(void *argument);
+void StartLoggerTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -103,18 +126,21 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
+	Init_NS();
+	Init_WE();
+
   /* USER CODE END Init */
   /* Create the mutex(es) */
-  /* creation of myMutex */
-  myMutexHandle = osMutexNew(&myMutex_attributes);
+  /* creation of uartMutex */
+  uartMutexHandle = osMutexNew(&uartMutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
-  /* creation of myBinarySem */
-  myBinarySemHandle = osSemaphoreNew(1, 1, &myBinarySem_attributes);
+  /* creation of ButtonSem */
+  ButtonSemHandle = osSemaphoreNew(1, 0, &ButtonSem_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -125,22 +151,31 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
-  /* creation of QueueMsg */
-  QueueMsgHandle = osMessageQueueNew (10, sizeof(uint32_t), &QueueMsg_attributes);
+  /* creation of xNorthQueue */
+  xNorthQueueHandle = osMessageQueueNew (10, sizeof(uint32_t), &xNorthQueue_attributes);
+
+  /* creation of xEastQueue */
+  xEastQueueHandle = osMessageQueueNew (10, sizeof(uint32_t), &xEastQueue_attributes);
+
+  /* creation of xPedReqQueue */
+  xPedReqQueueHandle = osMessageQueueNew (1, sizeof(uint16_t), &xPedReqQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of TrafficTask */
-  TrafficTaskHandle = osThreadNew(StartTrafficTask, NULL, &TrafficTask_attributes);
+  /* creation of NorthTask */
+  NorthTaskHandle = osThreadNew(StartNorthTask, NULL, &NorthTask_attributes);
 
-  /* creation of DisplayTask */
-  DisplayTaskHandle = osThreadNew(StartDisplayTask, NULL, &DisplayTask_attributes);
+  /* creation of EastTask */
+  EastTaskHandle = osThreadNew(StartEastTask, NULL, &EastTask_attributes);
 
-  /* creation of ButtonTask */
-  ButtonTaskHandle = osThreadNew(StartButtonTask, NULL, &ButtonTask_attributes);
+  /* creation of PedestrianTask */
+  PedestrianTaskHandle = osThreadNew(StartPedestrianTask, NULL, &PedestrianTask_attributes);
+
+  /* creation of LoggerTask */
+  LoggerTaskHandle = osThreadNew(StartLoggerTask, NULL, &LoggerTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -152,58 +187,116 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_StartTrafficTask */
+/* USER CODE BEGIN Header_StartNorthTask */
 /**
-  * @brief  Function implementing the TrafficTask thread.
+  * @brief  Function implementing the NorthTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartTrafficTask */
-void StartTrafficTask(void *argument)
+/* USER CODE END Header_StartNorthTask */
+void StartNorthTask(void *argument)
 {
-  /* USER CODE BEGIN StartTrafficTask */
+  /* USER CODE BEGIN StartNorthTask */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  NS.currentState(&NS);
+	  osDelay(50);
   }
-  /* USER CODE END StartTrafficTask */
+  /* USER CODE END StartNorthTask */
 }
 
-/* USER CODE BEGIN Header_StartDisplayTask */
+/* USER CODE BEGIN Header_StartEastTask */
 /**
-* @brief Function implementing the DisplayTask thread.
+* @brief Function implementing the EastTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartDisplayTask */
-void StartDisplayTask(void *argument)
+/* USER CODE END Header_StartEastTask */
+void StartEastTask(void *argument)
 {
-  /* USER CODE BEGIN StartDisplayTask */
+  /* USER CODE BEGIN StartEastTask */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  WE.currentState(&WE);
+	  osDelay(50);
   }
-  /* USER CODE END StartDisplayTask */
+  /* USER CODE END StartEastTask */
 }
 
-/* USER CODE BEGIN Header_StartButtonTask */
+/* USER CODE BEGIN Header_StartPedestrianTask */
 /**
-* @brief Function implementing the ButtonTask thread.
+* @brief Function implementing the PedestrianTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartButtonTask */
-void StartButtonTask(void *argument)
+/* USER CODE END Header_StartPedestrianTask */
+void StartPedestrianTask(void *argument)
 {
-  /* USER CODE BEGIN StartButtonTask */
+  /* USER CODE BEGIN StartPedestrianTask */
+	ButtonEvent_t event;
+	char msg[100];
+
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  osMessageQueueGet(xPedReqQueueHandle, &event, NULL, osWaitForever);
+
+	  switch(event)
+	  {
+	  	  case BUTTON_NS:
+	  		  sprintf(msg, "[BUTTON] North-South pedestrian request\r\n");
+	  		  LOG_Message(msg);
+
+	  		  NS.buttonState(&NS, &WE);
+
+	  		  break;
+
+	  	  case BUTTON_WE:
+	  		  sprintf(msg, "[BUTTON] West-East pedestrian request\r\n");
+	  		  LOG_Message(msg);
+
+	  		  WE.buttonState(&WE, &NS);
+
+	  		  break;
+	  }
   }
-  /* USER CODE END StartButtonTask */
+  /* USER CODE END StartPedestrianTask */
+}
+
+/* USER CODE BEGIN Header_StartLoggerTask */
+/**
+* @brief Function implementing the LoggerTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartLoggerTask */
+void StartLoggerTask(void *argument)
+{
+  /* USER CODE BEGIN StartLoggerTask */
+	  char* NS_state;
+	  char* WE_state;
+
+	  uint32_t NS_remain;
+	  uint32_t WE_remain;
+
+	  char buffer[100];
+
+  /* Infinite loop */
+	  for(;;)
+	  {
+		  getStateInfo(&NS, &NS_state, &NS_remain);
+		  getStateInfo(&WE, &WE_state, &WE_remain);
+
+		  sprintf(buffer, "NS: %s %lus | WE: %s %lus\r\n", NS_state, (NS_remain + 999) / 1000,
+				  	  	  	  	  	  	  	  	  	  	   WE_state, (WE_remain + 999) / 1000);
+		  LOG_Message(buffer);
+
+		  osDelay(1000);
+	  }
+
+  /* USER CODE END StartLoggerTask */
 }
 
 /* Private application code --------------------------------------------------*/
