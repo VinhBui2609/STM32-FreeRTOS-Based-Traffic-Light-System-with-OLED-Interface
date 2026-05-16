@@ -78,30 +78,15 @@ const osThreadAttr_t LoggerTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for xNorthQueue */
-osMessageQueueId_t xNorthQueueHandle;
-const osMessageQueueAttr_t xNorthQueue_attributes = {
-  .name = "xNorthQueue"
-};
-/* Definitions for xEastQueue */
-osMessageQueueId_t xEastQueueHandle;
-const osMessageQueueAttr_t xEastQueue_attributes = {
-  .name = "xEastQueue"
-};
-/* Definitions for xPedReqQueue */
-osMessageQueueId_t xPedReqQueueHandle;
-const osMessageQueueAttr_t xPedReqQueue_attributes = {
-  .name = "xPedReqQueue"
-};
 /* Definitions for uartMutex */
 osMutexId_t uartMutexHandle;
 const osMutexAttr_t uartMutex_attributes = {
   .name = "uartMutex"
 };
-/* Definitions for ButtonSem */
-osSemaphoreId_t ButtonSemHandle;
-const osSemaphoreAttr_t ButtonSem_attributes = {
-  .name = "ButtonSem"
+/* Definitions for buttonEvent */
+osEventFlagsId_t buttonEventHandle;
+const osEventFlagsAttr_t buttonEvent_attributes = {
+  .name = "buttonEvent"
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -138,10 +123,6 @@ void MX_FREERTOS_Init(void) {
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
-  /* Create the semaphores(s) */
-  /* creation of ButtonSem */
-  ButtonSemHandle = osSemaphoreNew(1, 0, &ButtonSem_attributes);
-
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -149,16 +130,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
-
-  /* Create the queue(s) */
-  /* creation of xNorthQueue */
-  xNorthQueueHandle = osMessageQueueNew (10, sizeof(uint32_t), &xNorthQueue_attributes);
-
-  /* creation of xEastQueue */
-  xEastQueueHandle = osMessageQueueNew (10, sizeof(uint32_t), &xEastQueue_attributes);
-
-  /* creation of xPedReqQueue */
-  xPedReqQueueHandle = osMessageQueueNew (1, sizeof(uint16_t), &xPedReqQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -180,6 +151,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
+
+  /* creation of buttonEvent */
+  buttonEventHandle = osEventFlagsNew(&buttonEvent_attributes);
 
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
@@ -235,32 +209,30 @@ void StartEastTask(void *argument)
 void StartPedestrianTask(void *argument)
 {
   /* USER CODE BEGIN StartPedestrianTask */
-	ButtonEvent_t event;
 	char msg[100];
+	uint32_t flags;
 
   /* Infinite loop */
   for(;;)
   {
-	  osMessageQueueGet(xPedReqQueueHandle, &event, NULL, osWaitForever);
+	  flags = osEventFlagsWait(buttonEventHandle, BUTTON_NS | BUTTON_WE, osFlagsWaitAny, osWaitForever);
 
-	  switch(event)
+	  if(flags & BUTTON_NS)
 	  {
-	  	  case BUTTON_NS:
-	  		  sprintf(msg, "[BUTTON] North-South pedestrian request\r\n");
-	  		  LOG_Message(msg);
+  		  sprintf(msg, "[BUTTON] North-South pedestrian request\r\n");
+  		  LOG_Message(msg);
 
-	  		  NS.buttonState(&NS, &WE);
-
-	  		  break;
-
-	  	  case BUTTON_WE:
-	  		  sprintf(msg, "[BUTTON] West-East pedestrian request\r\n");
-	  		  LOG_Message(msg);
-
-	  		  WE.buttonState(&WE, &NS);
-
-	  		  break;
+  		  NS.buttonState(&NS, &WE);
 	  }
+
+	  if(flags & BUTTON_WE)
+	  {
+  		  sprintf(msg, "[BUTTON] West-East pedestrian request\r\n");
+  		  LOG_Message(msg);
+
+  		  WE.buttonState(&WE, &NS);
+	  }
+
   }
   /* USER CODE END StartPedestrianTask */
 }

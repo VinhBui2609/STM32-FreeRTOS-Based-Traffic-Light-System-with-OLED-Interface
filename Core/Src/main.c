@@ -57,8 +57,7 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-extern osMessageQueueId_t xPedReqQueueHandle;
-extern volatile uint8_t buttonEvent;
+extern osEventFlagsId_t buttonEventHandle;
 /* USER CODE END 0 */
 
 /**
@@ -169,7 +168,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
 	static uint32_t lastPress = 0;
-	ButtonEvent_t event;
 
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM1) {
@@ -182,16 +180,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		if(HAL_GPIO_ReadPin(NS_PedesButton_GPIO_Port, NS_PedesButton_Pin) == GPIO_PIN_RESET)
 		{
 			lastPress = HAL_GetTick();
-			event = BUTTON_NS;
-			osMessageQueuePut(xPedReqQueueHandle, &event, 0, 0);
+			osEventFlagsSet(buttonEventHandle, BUTTON_NS);
 		}
 
 		// If West-East Road has Pedestrian
 		if(HAL_GPIO_ReadPin(WE_PedesButton_GPIO_Port, WE_PedesButton_Pin) == GPIO_PIN_RESET)
 		{
 			lastPress = HAL_GetTick();
-			event = BUTTON_WE;
-			osMessageQueuePut(xPedReqQueueHandle, &event, 0, 0);
+			osEventFlagsSet(buttonEventHandle, BUTTON_WE);
 		}
 	}
   /* USER CODE END Callback 1 */

@@ -27,12 +27,10 @@
 #include "cmsis_os.h"
 /* USER CODE END Includes */
 
-typedef enum {
 
-	BUTTON_NS,
-	BUTTON_WE
+#define BUTTON_NS	(1U << 0)
+#define BUTTON_WE	(1U << 1)
 
-} ButtonEvent_t;
 
 typedef struct TrafficLight {
 
