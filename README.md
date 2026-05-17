@@ -37,7 +37,6 @@ The system uses multiple RTOS tasks to manage LEDs, button input and many featur
   ### 1.TrafficLightTask
   Controls LED state transitions.
   - RED
-  - RED_YELLOW
   - GREEN
   - YELLOW
 
